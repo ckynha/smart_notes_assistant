@@ -1,5 +1,7 @@
 fastapi
 uvicorn
+requests
 python-docx
 pypdf
+python-dotenv
 python-multipart
