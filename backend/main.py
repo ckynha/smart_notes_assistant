@@ -1,5 +1,6 @@
 # главный файл бэкенда, тут все ручки FastAPI
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
+from pydantic import BaseModel
 
 from . import models
 from . import parser
@@ -10,6 +11,10 @@ app = FastAPI(title="Smart Notes Assistant")
 
 # создаем таблицы при старте
 init_db()
+
+
+class AskRequest(BaseModel):
+    question: str
 
 
 @app.post("/notes")
@@ -55,6 +60,39 @@ def analyze(note_id: int):
         "topics": result["topics"],
         "questions": result["questions"],
     }
+
+
+@app.get("/notes/{note_id}/summary")
+def get_summary(note_id: int):
+    note = models.get_note(note_id)
+    if note is None:
+        raise HTTPException(status_code=404, detail="Конспект не найден")
+
+    return {
+        "id": note["id"],
+        "filename": note["filename"],
+        "subject": note["subject"],
+        "summary": note["summary"],
+        "topics": models.get_topics(note_id),
+        "questions": models.get_questions(note_id),
+    }
+
+
+@app.post("/notes/{note_id}/ask")
+def ask(note_id: int, req: AskRequest):
+    note = models.get_note(note_id)
+    if note is None:
+        raise HTTPException(status_code=404, detail="Конспект не найден")
+
+    if not req.question.strip():
+        raise HTTPException(status_code=400, detail="Вопрос пустой")
+
+    try:
+        answer = llm.answer_question(note["raw_text"], req.question)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail="Ошибка LLM: " + str(e))
+
+    return {"id": note_id, "question": req.question, "answer": answer}
 
 
 @app.get("/notes")

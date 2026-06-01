@@ -89,3 +89,11 @@ def analyze_note(note_text):
         "topics": topics,
         "questions": questions,
     }
+
+
+def answer_question(note_text, question):
+    answer = chat(
+        prompts.QA_SYSTEM_PROMPT,
+        prompts.build_qa_prompt(note_text, question),
+    )
+    return answer.strip()
